@@ -1,0 +1,58 @@
+# Deploy thử DCMS + kho tri thức SP-NV, nối với Mindmate (control-plane :8080, Keycloak :8081) chạy trên máy host.
+#   cd deploy && cp .env.example .env   (điền giá trị thật)
+#   docker compose up -d --build
+name: dcms
+
+services:
+  # Chuyển tiếp localhost:8080/8081 trong mạng của các service ra Mindmate/Keycloak trên host.
+  # Nhờ vậy DCMS lấy token qua đúng http://localhost:8081 → issuer khớp với cấu hình control-plane.
+  gateway:
+    image: alpine/socat:latest
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        socat TCP-LISTEN:8080,fork,reuseaddr TCP:host.docker.internal:8080 &
+        socat TCP-LISTEN:8081,fork,reuseaddr TCP:host.docker.internal:8081 &
+        wait
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${DCMS_HOST_PORT:-4080}:4000" # DCMS (API + giao diện)
+      - "${KNOWLEDGE_HOST_PORT:-4100}:4100" # kho tri thức (MCP cho Mindmate)
+    restart: unless-stopped
+
+  knowledge:
+    build: { context: .., dockerfile: Dockerfile }
+    image: dcms-app:latest
+    network_mode: "service:gateway"
+    working_dir: /app
+    command: ["npm", "run", "start", "-w", "knowledge"]
+    env_file: .env
+    volumes:
+      - knowledge-data:/app/knowledge/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4100/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    depends_on: [gateway]
+    restart: unless-stopped
+
+  dcms:
+    image: dcms-app:latest
+    network_mode: "service:gateway"
+    entrypoint: ["/app/deploy/dcms-entrypoint.sh"]
+    env_file: .env
+    environment:
+      PORT: "4000"
+    volumes:
+      - dcms-data:/data
+      - dcms-uploads:/app/server/uploads
+    depends_on:
+      knowledge: { condition: service_healthy }
+    restart: unless-stopped
+
+volumes:
+  dcms-data:
+  dcms-uploads:
+  knowledge-data:

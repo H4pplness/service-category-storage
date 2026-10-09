@@ -122,6 +122,19 @@ DCMS web (nút chat → Drawer) ──▶ DCMS server /api/assistant/* ──(Ke
 
 Mỗi người dùng DCMS có danh sách hội thoại riêng (bảng `AssistantConversation`). Lịch sử hội thoại lưu trên Mindmate.
 
+### Deploy bằng Docker Compose
+
+```bash
+cd deploy
+cp .env.example .env        # điền token Confluence, secret client dcms, JWT_SECRET...
+docker compose up -d --build
+```
+
+- **DCMS** (API và giao diện build sẵn): http://localhost:4080. CSDL SQLite nằm trên volume `dcms-data`; lần đầu chạy sẽ tự tạo bảng và nạp dữ liệu mẫu.
+- **Kho tri thức**: http://localhost:4100, MCP ở `/mcp`. Dữ liệu nằm trên volume `knowledge-data`.
+- Mindmate (control-plane :8080, Keycloak :8081) chạy trên host. Container `gateway` (socat) chuyển tiếp `localhost:8080/8081` từ bên trong các container ra host, nhờ vậy token Keycloak giữ đúng issuer `http://localhost:8081/...` mà control-plane chấp nhận.
+- Đổi cổng bằng biến `DCMS_HOST_PORT` và `KNOWLEDGE_HOST_PORT`. Khi đổi cổng kho tri thức, cập nhật thêm `KNOWLEDGE_MCP_URL`.
+
 ## Cấu trúc thư mục
 
 ```

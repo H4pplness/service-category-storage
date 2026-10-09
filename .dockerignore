@@ -1,0 +1,10 @@
+.git
+**/node_modules
+**/dist
+server/prisma/*.db
+server/prisma/*.db-journal
+server/uploads
+knowledge/data
+**/application-local.properties
+deploy/.env
+*.log

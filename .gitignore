@@ -8,3 +8,4 @@ server/uploads/
 server/config/application-local.properties
 knowledge/data/
 knowledge/config/application-local.properties
+deploy/.env
