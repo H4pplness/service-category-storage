@@ -13,5 +13,6 @@ COPY server/prisma/schema.prisma server/prisma/
 RUN npm ci --no-audit --no-fund
 
 COPY . .
-RUN npm run build -w web && sed -i 's/$//' deploy/*.sh && chmod +x deploy/*.sh
+# Bỏ CR (nếu repo được checkout trên Windows) để script chạy được trong Linux
+RUN npm run build -w web && sed -i 's/\r$//' deploy/*.sh && chmod +x deploy/*.sh
 ENV NODE_ENV=production
