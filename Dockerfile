@@ -13,5 +13,5 @@ COPY server/prisma/schema.prisma server/prisma/
 RUN npm ci --no-audit --no-fund
 
 COPY . .
-RUN npm run build -w web && chmod +x deploy/*.sh
+RUN npm run build -w web && sed -i "s/$//" deploy/*.sh && chmod +x deploy/*.sh
 ENV NODE_ENV=production
