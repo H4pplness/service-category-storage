@@ -105,6 +105,12 @@ export function createMockConfluence(data: MockData, BASE: string) {
       res.json({ results: slice.map((p) => toJson(p, expand, cloud)), start, limit, size: slice.length, totalSize: all.length, _links: links });
     });
 
+    r.get('/space/:key', (req, res) => {
+      if (req.params.key !== data.spaceKey) return res.status(404).json({ statusCode: 404, message: 'No space with key : ' + req.params.key });
+      const home = data.pages.get('100000');
+      res.json({ key: data.spaceKey, name: data.spaceName, type: 'global', homepage: home ? { id: home.id, type: 'page', title: home.title } : undefined });
+    });
+
     r.get('/content/:id', (req, res) => {
       const p = data.pages.get(req.params.id);
       if (!p) return res.status(404).json({ statusCode: 404, message: 'No content found with id: ' + req.params.id });

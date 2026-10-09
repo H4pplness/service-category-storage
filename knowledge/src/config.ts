@@ -54,6 +54,7 @@ export interface AppConfig {
     maxRetries: number;
     spaces: SpaceConfig[];
     excludeTitlePrefixes: string[];
+    excludeSpaceHomepage: boolean;
   };
   sync: { cron: string; reconcileCron: string; runOnStartup: boolean; overlapMinutes: number };
   storagePath: string;
@@ -93,6 +94,7 @@ export function buildConfig(p: Record<string, string>): AppConfig {
       maxRetries: num(p['confluence.max-retries'], 3),
       spaces,
       excludeTitlePrefixes: list(p['confluence.exclude-title-prefixes']),
+      excludeSpaceHomepage: bool(p['confluence.exclude-space-homepage'], true),
     },
     sync: {
       cron: p['sync.cron'] || '0 * * * *',

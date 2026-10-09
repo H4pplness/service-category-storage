@@ -77,6 +77,17 @@ describe('xử lý văn bản', () => {
     assert.match(md, /\| Mã sản phẩm \| THE.TD.VISA \|/);
   });
 
+  it('bỏ thuộc tính macro ADF (Cloud) và placeholder, giữ nội dung dự phòng', () => {
+    const md = storageToMarkdown(
+      '<h2>A</h2><ac:adf-extension><ac:adf-node type="extension"><ac:adf-attribute key="extension-type">com.atlassian.x</ac:adf-attribute></ac:adf-node>' +
+        '<ac:adf-fallback><p>nội dung dự phòng</p></ac:adf-fallback></ac:adf-extension>' +
+        '<p>Mô tả <ac:placeholder>Gõ vào đây</ac:placeholder>thật</p>',
+    );
+    assert.doesNotMatch(md, /com\.atlassian|Gõ vào đây/);
+    assert.match(md, /nội dung dự phòng/);
+    assert.match(md, /Mô tả thật/);
+  });
+
   it('lấy bảng thuộc tính trang', () => {
     assert.deepEqual(extractProperties(storage), { 'Mã sản phẩm': 'THE.TD.VISA', 'Phòng xử lý': 'Phòng Tra soát' });
   });
@@ -125,13 +136,12 @@ describe('đồng bộ + tìm kiếm + MCP (với Confluence giả lập)', () =
     ctx.store.close();
   });
 
-  it('lần đầu quét toàn bộ, bỏ trang mục lục', async () => {
+  it('lần đầu quét toàn bộ, bỏ trang mục lục và trang chủ space', async () => {
     const r = await ctx.sync.run('auto');
     assert.equal(r.status, 'SUCCESS');
-    const expected = [...data.pages.values()].filter((p) => !p.title.startsWith('[Mục lục]')).length;
+    const expected = [...data.pages.values()].filter((p) => !p.title.startsWith('[Mục lục]') && p.id !== '100000').length;
     assert.equal(ctx.store.countBySpace().SPNV, expected);
-    const page = ctx.store.getPage('100000')!;
-    assert.equal(page.title, 'Sổ tay chọn Sản phẩm - Nghiệp vụ');
+    assert.equal(ctx.store.getPage('100000'), null);
     const child = [...data.pages.values()].find((p) => p.title.includes('Visa – Tra soát'))!;
     assert.deepEqual(ctx.store.getPage(child.id)!.path, ['Sổ tay chọn Sản phẩm - Nghiệp vụ', 'Thẻ']);
   });

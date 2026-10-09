@@ -81,20 +81,31 @@ export class ConfluenceClient {
   }
 
   async getJson<T>(url: string): Promise<T> {
+    return this.request<T>('GET', url);
+  }
+
+  /** Gửi request (tự thử lại khi 429/5xx/lỗi mạng). Dùng cho cả đọc và ghi (script tạo dữ liệu mẫu). */
+  async request<T>(method: string, url: string, body?: unknown): Promise<T> {
     const headers: Record<string, string> = { Accept: 'application/json' };
     const auth = this.authHeader();
     if (auth) headers.Authorization = auth;
+    if (body !== undefined) headers['Content-Type'] = 'application/json';
     let attempt = 0;
     for (;;) {
       attempt++;
       try {
-        const res = await fetch(url, { headers, signal: AbortSignal.timeout(this.cfg.timeoutMs) });
-        if (res.ok) return (await res.json()) as T;
+        const res = await fetch(url, {
+          method,
+          headers,
+          body: body === undefined ? undefined : JSON.stringify(body),
+          signal: AbortSignal.timeout(this.cfg.timeoutMs),
+        });
+        if (res.ok) return (res.status === 204 ? undefined : await res.json()) as T;
         const retryable = res.status === 429 || res.status >= 500;
-        const body = (await res.text()).slice(0, 300);
+        const detail = (await res.text()).slice(0, 300);
         if (!retryable || attempt > this.cfg.maxRetries) {
           const hint = res.status === 401 || res.status === 403 ? ' – kiểm tra confluence.username/token' : '';
-          throw new ConfluenceError(`Confluence trả về ${res.status}${hint}: ${body}`, res.status);
+          throw new ConfluenceError(`Confluence trả về ${res.status}${hint}: ${detail}`, res.status);
         }
         const retryAfter = Number(res.headers.get('retry-after'));
         await sleep(Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 1000 * 2 ** attempt);
@@ -118,6 +129,12 @@ export class ConfluenceClient {
       const next = res._links?.next;
       url = next ? (/^https?:\/\//.test(next) ? next : `${this.cfg.baseUrl}${next}`) : undefined;
     }
+  }
+
+  /** id trang chủ (overview) của space, null nếu không có */
+  async getSpaceHomepageId(spaceKey: string): Promise<string | null> {
+    const s = await this.getJson<{ homepage?: { id: string } }>(`${this.apiBase}/space/${encodeURIComponent(spaceKey)}?expand=homepage`);
+    return s.homepage?.id ? String(s.homepage.id) : null;
   }
 
   async getPage(id: string): Promise<ConfluencePage> {

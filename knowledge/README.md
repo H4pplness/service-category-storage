@@ -32,6 +32,17 @@ MOCK_PAGES=10000 npm run mock:confluence -w knowledge # kiểm thử quy mô 10.
   - Tạo trang: `POST /__mock/pages` với body `{"title": "...", "when": ["..."], "group": "Thẻ"}`.
   - Xoá trang: `DELETE /__mock/pages/{id}`. Lần đối soát kế tiếp sẽ xoá trang khỏi kho.
 
+### Dữ liệu mẫu trên Confluence thật
+
+```bash
+npm run seed:confluence -w knowledge -- --dry-run   # xem trước danh sách trang
+npm run seed:confluence -w knowledge                # tạo/cập nhật ~110 trang trên space đầu tiên trong confluence.spaces
+```
+
+- Tạo 7 trang `[Mục lục] <nhóm>` và 103 trang SP-NV (danh mục trong `seed/catalog.ts`).
+- Loại sản phẩm tham khảo danh mục công khai của các ngân hàng, đặt tên chung, không gắn thương hiệu.
+- Mọi trang gắn label `du-lieu-mau`. Chạy lại an toàn: trang đã có chỉ được cập nhật khi nội dung đổi.
+
 ## Cấu hình – `config/application.properties`
 
 Giá trị dạng `${BIEN:mac_dinh}` lấy từ biến môi trường. Để ghi đè cục bộ, dùng `config/application-local.properties` (không commit).

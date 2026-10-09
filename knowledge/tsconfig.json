@@ -10,5 +10,5 @@
     "resolveJsonModule": true,
     "noEmit": true
   },
-  "include": ["src", "mock-confluence", "test"]
+  "include": ["src", "mock-confluence", "test", "seed"]
 }

@@ -53,6 +53,8 @@ export function toPageRecord(page: ConfluencePage, client: ConfluenceClient, exc
 
 export class SyncService {
   private current: Promise<SyncResult> | null = null;
+  // id các trang luôn bỏ qua (trang chủ của space)
+  private excludedIds = new Set<string>();
 
   constructor(
     private store: KnowledgeStore,
@@ -71,8 +73,8 @@ export class SyncService {
     return this.current;
   }
 
-  private isExcluded(title: string): boolean {
-    return this.cfg.confluence.excludeTitlePrefixes.some((p) => title.startsWith(p));
+  private isExcluded(title: string, id?: string): boolean {
+    return (id !== undefined && this.excludedIds.has(String(id))) || this.cfg.confluence.excludeTitlePrefixes.some((p) => title.startsWith(p));
   }
 
   private async execute(mode: SyncMode): Promise<SyncResult> {
@@ -114,6 +116,10 @@ export class SyncService {
   private async syncSpace(space: SpaceConfig, mode: SyncMode, stats: SyncStats) {
     const state = this.store.getState(space.key);
     const startedAt = new Date();
+    if (this.cfg.confluence.excludeSpaceHomepage) {
+      const home = await this.client.getSpaceHomepageId(space.key);
+      if (home) this.excludedIds.add(home);
+    }
     const needFull = mode === 'full' || (mode === 'auto' && (!state.lastFullAt || !state.lastIncrementalAt));
 
     if (mode === 'reconcile') {
@@ -153,7 +159,7 @@ export class SyncService {
         stats.fetched++;
         const id = String(page.id);
         if (page.type !== 'page' || (page.status && page.status !== 'current')) continue;
-        if (this.isExcluded(page.title)) {
+        if (this.isExcluded(page.title, page.id)) {
           if (versions.has(id)) toDelete.push(id);
           continue;
         }
@@ -183,7 +189,7 @@ export class SyncService {
     log(`Space ${space.key}: đối soát danh sách trang`);
     const remote = new Map<string, string>();
     for await (const batch of this.client.search(buildSpaceCql(space), undefined, 200)) {
-      for (const p of batch) if (!this.isExcluded(p.title)) remote.set(String(p.id), p.title);
+      for (const p of batch) if (!this.isExcluded(p.title, p.id)) remote.set(String(p.id), p.title);
     }
     const local = this.store.versions(space.key);
     const removed = [...local.keys()].filter((id) => !remote.has(id));

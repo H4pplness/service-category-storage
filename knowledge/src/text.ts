@@ -91,6 +91,13 @@ class MarkdownWriter {
       }
       case 'time':
         return attr(n, 'datetime');
+      case 'ac:adf-extension': {
+        const fb = childByTag(n, 'ac:adf-fallback');
+        return fb ? this.inline(fb.childNodes) : '';
+      }
+      case 'ac:adf-attribute':
+      case 'ac:adf-parameter':
+      case 'ac:placeholder':
       case 'ac:parameter':
       case 'ac:image':
       case 'ac:emoticon':
@@ -128,7 +135,7 @@ class MarkdownWriter {
     return (
       /^h[1-6]$/.test(tag) ||
       ['p', 'div', 'ul', 'ol', 'table', 'pre', 'blockquote', 'hr', 'section', 'ac:layout', 'ac:layout-section', 'ac:layout-cell'].includes(tag) ||
-      ['ac:structured-macro', 'ac:task-list', 'ac:rich-text-body'].includes(tag)
+      ['ac:structured-macro', 'ac:task-list', 'ac:rich-text-body', 'ac:adf-extension'].includes(tag)
     );
   }
 
@@ -168,6 +175,11 @@ class MarkdownWriter {
         return this.table(el);
       case 'ac:structured-macro':
         return this.macro(el, ctx);
+      case 'ac:adf-extension': {
+        // Macro dạng ADF (Confluence Cloud): chỉ lấy nội dung dự phòng, bỏ thuộc tính kỹ thuật
+        const fb = childByTag(el, 'ac:adf-fallback');
+        return fb ? this.blocks(fb.childNodes, ctx) : '';
+      }
       default:
         return this.blocks(el.childNodes, ctx);
     }
