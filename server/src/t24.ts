@@ -1,0 +1,20 @@
+// Dữ liệu giả lập bảng MB.TBL.SANPHAM.KEY của hệ thống lõi T24.
+export const T24_PRODUCTS: { code: string; name: string; parent?: string }[] = [
+  { code: 'THE', name: 'Thẻ' },
+  { code: 'THE.TD', name: 'Thẻ tín dụng', parent: 'THE' },
+  { code: 'THE.TD.VISA', name: 'Thẻ tín dụng quốc tế Visa', parent: 'THE.TD' },
+  { code: 'THE.TD.JCB', name: 'Thẻ tín dụng quốc tế JCB', parent: 'THE.TD' },
+  { code: 'THE.GN', name: 'Thẻ ghi nợ', parent: 'THE' },
+  { code: 'THE.GN.ND', name: 'Thẻ ghi nợ nội địa', parent: 'THE.GN' },
+  { code: 'THE.GN.QT', name: 'Thẻ ghi nợ quốc tế', parent: 'THE.GN' },
+  { code: 'TK', name: 'Tài khoản' },
+  { code: 'TK.TT', name: 'Tài khoản thanh toán', parent: 'TK' },
+  { code: 'TK.TT.CN', name: 'Tài khoản thanh toán cá nhân', parent: 'TK.TT' },
+  { code: 'TK.TT.DN', name: 'Tài khoản thanh toán doanh nghiệp', parent: 'TK.TT' },
+  { code: 'NHDT', name: 'Ngân hàng điện tử' },
+  { code: 'NHDT.APP', name: 'Ứng dụng Mobile Banking', parent: 'NHDT' },
+  { code: 'NHDT.IB', name: 'Internet Banking doanh nghiệp', parent: 'NHDT' },
+  { code: 'VAY', name: 'Cho vay' },
+  { code: 'VAY.TC', name: 'Vay tiêu dùng', parent: 'VAY' },
+  { code: 'VAY.TC.TC', name: 'Vay tín chấp', parent: 'VAY.TC' },
+];

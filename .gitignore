@@ -1,0 +1,10 @@
+node_modules/
+dist/
+server/prisma/*.db
+server/prisma/*.db-journal
+server/uploads/
+*.log
+.env
+server/config/application-local.properties
+knowledge/data/
+knowledge/config/application-local.properties

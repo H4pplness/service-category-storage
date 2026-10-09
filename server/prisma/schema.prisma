@@ -1,0 +1,434 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dcms.db"
+}
+
+// ───────────── Tổ chức & nhân sự (dữ liệu từ service đơn vị / nhân sự) ─────────────
+
+model Department {
+  id          Int          @id @default(autoincrement())
+  code        String       @unique
+  name        String
+  parentId    Int?
+  parent      Department?  @relation("DeptTree", fields: [parentId], references: [id])
+  children    Department[] @relation("DeptTree")
+  level       Int
+  focalUserId Int? // nhân sự đầu mối được chỉ định nhận tác vụ tự sinh
+  active      Boolean      @default(true)
+  users       User[]
+  tasks       Task[]
+}
+
+model User {
+  id             Int         @id @default(autoincrement())
+  username       String      @unique
+  passwordHash   String
+  fullName       String
+  email          String?
+  phone          String?
+  title          String?
+  role           String      @default("USER") // ADMIN | USER
+  active         Boolean     @default(true)
+  departmentId   Int?
+  department     Department? @relation(fields: [departmentId], references: [id])
+  ownedTickets   Ticket[]    @relation("TicketOwner")
+  createdTickets Ticket[]    @relation("TicketCreator")
+  assignedTasks  Task[]      @relation("TaskAssignee")
+  createdTasks   Task[]      @relation("TaskCreator")
+  assistantConversations AssistantConversation[]
+}
+
+model Branch {
+  id      Int                   @id @default(autoincrement())
+  code    String                @unique
+  name    String
+  address String?
+  rms     RelationshipManager[]
+}
+
+model RelationshipManager {
+  id       Int     @id @default(autoincrement())
+  code     String  @unique
+  fullName String
+  phone    String?
+  branchId Int
+  branch   Branch  @relation(fields: [branchId], references: [id])
+  active   Boolean @default(true)
+}
+
+model Province {
+  id    Int    @id @default(autoincrement())
+  code  String @unique
+  name  String
+  wards Ward[]
+}
+
+model Ward {
+  id         Int      @id @default(autoincrement())
+  code       String   @unique
+  name       String
+  provinceId Int
+  province   Province @relation(fields: [provinceId], references: [id])
+}
+
+// ───────────── Khách hàng (dữ liệu 360 view) ─────────────
+
+model Customer {
+  id           Int           @id @default(autoincrement())
+  cif          String        @unique
+  fullName     String
+  segment      String // MASS | SME | PRIORITY | PRIVATE
+  phone        String?
+  email        String?
+  idNumber     String?
+  address      String?
+  accounts     Account[]
+  cards        Card[]
+  transactions Transaction[]
+  tickets      Ticket[]
+}
+
+model Account {
+  id         Int      @id @default(autoincrement())
+  customerId Int
+  customer   Customer @relation(fields: [customerId], references: [id])
+  accountNo  String   @unique
+  type       String
+  currency   String   @default("VND")
+  balance    Float
+  status     String
+}
+
+model Card {
+  id         Int      @id @default(autoincrement())
+  customerId Int
+  customer   Customer @relation(fields: [customerId], references: [id])
+  cardNo     String   @unique
+  cardType   String
+  status     String
+  expiry     String
+}
+
+model Transaction {
+  id          Int      @id @default(autoincrement())
+  customerId  Int
+  customer    Customer @relation(fields: [customerId], references: [id])
+  refNo       String   @unique
+  sourceNo    String // số tài khoản / số thẻ
+  amount      Float
+  currency    String   @default("VND")
+  txnAt       DateTime
+  description String
+}
+
+// ───────────── Danh mục ─────────────
+
+model Product {
+  id        Int       @id @default(autoincrement())
+  code      String    @unique
+  name      String
+  parentId  Int?
+  parent    Product?  @relation("ProductTree", fields: [parentId], references: [id])
+  children  Product[] @relation("ProductTree")
+  level     Int
+  active    Boolean   @default(true)
+  source    String    @default("MANUAL") // T24 | MANUAL
+  sortOrder Int       @default(0)
+  services  Service[]
+  tickets   Ticket[]
+}
+
+model Operation {
+  id        Int         @id @default(autoincrement())
+  code      String      @unique
+  name      String
+  parentId  Int?
+  parent    Operation?  @relation("OperationTree", fields: [parentId], references: [id])
+  children  Operation[] @relation("OperationTree")
+  level     Int
+  active    Boolean     @default(true)
+  source    String      @default("MANUAL")
+  sortOrder Int         @default(0)
+  services  Service[]
+  tickets   Ticket[]
+}
+
+model Field {
+  id            Int        @id @default(autoincrement())
+  code          String     @unique
+  name          String
+  infoType      String // INPUT | VIEW360
+  view360Source String?
+  dataType      String
+  displayType   String
+  options       String     @default("[]")
+  required      Boolean    @default(false)
+  showOnTicket  Boolean    @default(true)
+  placeholder   String?
+  description   String?
+  active        Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  formItems     FormItem[]
+}
+
+model Form {
+  id          Int            @id @default(autoincrement())
+  code        String         @unique
+  name        String         @unique
+  description String?
+  active      Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  items       FormItem[]
+  services    Service[]
+  steps       WorkflowStep[]
+}
+
+model FormItem {
+  id           Int     @id @default(autoincrement())
+  formId       Int
+  form         Form    @relation(fields: [formId], references: [id], onDelete: Cascade)
+  fieldId      Int
+  field        Field   @relation(fields: [fieldId], references: [id])
+  sortOrder    Int
+  parentItemId Int?
+  parentValues String  @default("[]")
+}
+
+model Workflow {
+  id            Int               @id @default(autoincrement())
+  code          String            @unique
+  name          String
+  description   String?
+  workHoursMode String            @default("OFFICE") // OFFICE | H24
+  active        Boolean           @default(true)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  steps         WorkflowStep[]
+  services      ServiceWorkflow[]
+}
+
+model WorkflowStep {
+  id             Int          @id @default(autoincrement())
+  key            String
+  workflowId     Int
+  workflow       Workflow     @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  sortOrder      Int
+  name           String
+  description    String?
+  expectedResult String?
+  slaDays        Int          @default(0)
+  slaHours       Int          @default(0)
+  slaMinutes     Int          @default(0)
+  departmentId   Int?
+  assigneeId     Int?
+  formId         Int?
+  form           Form?        @relation(fields: [formId], references: [id])
+  results        StepResult[]
+}
+
+model StepResult {
+  id          Int          @id @default(autoincrement())
+  key         String
+  stepId      Int
+  step        WorkflowStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  parentKey   String?
+  code        String
+  name        String
+  sortOrder   Int
+  routeType   String       @default("NEXT") // NEXT | GOTO | END
+  gotoStepKey String?
+}
+
+model Service {
+  id            Int               @id @default(autoincrement())
+  code          String            @unique
+  productId     Int
+  product       Product           @relation(fields: [productId], references: [id])
+  operationId   Int
+  operation     Operation         @relation(fields: [operationId], references: [id])
+  formId        Int?
+  form          Form?             @relation(fields: [formId], references: [id])
+  workHoursMode String            @default("OFFICE")
+  active        Boolean           @default(true)
+  segmentMode   String            @default("ALL") // ALL | BY_SEGMENT
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  workflows     ServiceWorkflow[]
+  tickets       Ticket[]
+
+  @@unique([productId, operationId])
+}
+
+model ServiceWorkflow {
+  id         Int      @id @default(autoincrement())
+  serviceId  Int
+  service    Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  segment    String // ALL | MASS | SME | PRIORITY | PRIVATE
+  workflowId Int
+  workflow   Workflow @relation(fields: [workflowId], references: [id])
+}
+
+model Holiday {
+  id   Int    @id @default(autoincrement())
+  date String @unique // YYYY-MM-DD
+  name String
+  type String @default("HOLIDAY") // HOLIDAY | WORKDAY (làm bù)
+}
+
+model Setting {
+  key   String @id
+  value String
+}
+
+model Sequence {
+  key   String @id
+  value Int
+}
+
+// ───────────── Phiếu & Tác vụ ─────────────
+
+model Ticket {
+  id                Int          @id @default(autoincrement())
+  code              String       @unique
+  channel           String
+  status            String // NEW | IN_PROGRESS | RETURNED | DONE
+  productId         Int
+  product           Product      @relation(fields: [productId], references: [id])
+  operationId       Int
+  operation         Operation    @relation(fields: [operationId], references: [id])
+  serviceId         Int?
+  service           Service?     @relation(fields: [serviceId], references: [id])
+  customerId        Int?
+  customer          Customer?    @relation(fields: [customerId], references: [id])
+  segment           String?
+  ownerId           Int
+  owner             User         @relation("TicketOwner", fields: [ownerId], references: [id])
+  creatorId         Int
+  creator           User         @relation("TicketCreator", fields: [creatorId], references: [id])
+  description       String?
+  exchangeContent   String?
+  resolutionSummary String?
+  linkedTicketIds   String       @default("[]")
+  workHoursMode     String
+  slaMinutes        Int
+  slaStartAt        DateTime     @default(now())
+  dueAt             DateTime
+  completedAt       DateTime?
+  configSnapshot    String
+  dynamicValues     String       @default("{}")
+  autoGenError      String?
+  serviceVersion    Int          @default(1)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  steps             TicketStep[]
+  tasks             Task[]
+}
+
+model TicketStep {
+  id              Int     @id @default(autoincrement())
+  ticketId        Int
+  ticket          Ticket  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  generation      Int
+  stepKey         String
+  name            String
+  sortOrder       Int
+  status          String // PENDING | ACTIVE | DONE | SKIPPED | CANCELLED
+  slaDays         Int
+  slaHours        Int
+  slaMinutes      Int
+  departmentId    Int?
+  assigneeId      Int?
+  description     String?
+  expectedResult  String?
+  formSnapshot    String  @default("null")
+  resultsSnapshot String  @default("[]")
+  tasks           Task[]
+}
+
+model Task {
+  id             Int         @id @default(autoincrement())
+  code           String      @unique
+  ticketId       Int
+  ticket         Ticket      @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticketStepId   Int
+  step           TicketStep  @relation(fields: [ticketStepId], references: [id], onDelete: Cascade)
+  departmentId   Int?
+  department     Department? @relation(fields: [departmentId], references: [id])
+  assigneeId     Int?
+  assignee       User?       @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  creatorId      Int?
+  creator        User?       @relation("TaskCreator", fields: [creatorId], references: [id])
+  description    String?
+  notifyChannels String      @default("[\"EMAIL\"]")
+  status         String
+  resultKey      String?
+  resultLabel    String?
+  note           String?
+  dynamicValues  String      @default("{}")
+  workHoursMode  String
+  slaMinutes     Int
+  dueAt          DateTime
+  completedAt    DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+}
+
+model Attachment {
+  id           Int      @id @default(autoincrement())
+  ownerType    String // TICKET | TASK
+  ownerId      Int
+  fileName     String
+  storedName   String
+  size         Int
+  mimeType     String?
+  uploadedById Int?
+  createdAt    DateTime @default(now())
+
+  @@index([ownerType, ownerId])
+}
+
+model History {
+  id         Int      @id @default(autoincrement())
+  entityType String // TICKET | TASK
+  entityId   Int
+  actorId    Int?
+  actorName  String
+  action     String
+  summary    String?
+  changes    String   @default("[]")
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  title     String
+  message   String
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ───── Trợ lý Mindmate ─────
+
+// Hội thoại hỏi đáp với trợ lý Mindmate. id = conversation_id bên Mindmate (workspace "dcms").
+model AssistantConversation {
+  id        String   @id
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, updatedAt])
+}

@@ -1,0 +1,33 @@
+{
+  "name": "dcms",
+  "version": "1.0.0",
+  "private": true,
+  "description": "DCMS - Hệ thống quản lý Phiếu & Tác vụ theo quy trình",
+  "workspaces": [
+    "server",
+    "web",
+    "knowledge"
+  ],
+  "scripts": {
+    "setup": "npm run setup -w server",
+    "db:reset": "npm run db:reset -w server",
+    "dev": "concurrently -k -n api,web,kb -c blue,magenta,green \"npm run dev -w server\" \"npm run dev -w web\" \"npm run dev -w knowledge\"",
+    "build": "npm run build -w web",
+    "start": "npm run build -w web && npm run start -w server",
+    "typecheck": "npm run typecheck -w server && npm run typecheck -w web && npm run typecheck -w knowledge",
+    "db:fill": "npm run db:fill -w server",
+    "mock:confluence": "npm run mock:confluence -w knowledge",
+    "mindmate:setup": "npm run mindmate:setup -w server",
+    "test": "npm test -w knowledge"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  },
+  "allowScripts": {
+    "@prisma/client@6.19.3": true,
+    "@prisma/engines@6.19.3": true,
+    "esbuild@0.28.2": true,
+    "esbuild@0.25.12": true,
+    "prisma@6.19.3": true
+  }
+}
